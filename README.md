@@ -1,0 +1,1 @@
+# Delayed neurofeedback impedes training of the parietal alpha-band power

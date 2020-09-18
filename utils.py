@@ -30,6 +30,8 @@ def azimuthal_equidistant_projection(hsp):
     return pos
 
 
+
+
 class Montage(pd.DataFrame):
     CHANNEL_TYPES = ['EEG', 'MAG', 'GRAD', 'OTHER']
 
@@ -80,9 +82,16 @@ class Montage(pd.DataFrame):
     @staticmethod
     def load_layout(name):
         if name == 'EEG1005':
-            layout = mne.channels.read_montage('standard_1005')
-            layout.pos = azimuthal_equidistant_projection(layout.pos)
-            layout.names = layout.ch_names
+            if int(mne.__version__.split('.')[1]) >= 19:  # validate mne version (mne 0.19+)
+                layout = mne.channels.make_standard_montage('standard_1005')
+                layout.names = layout.ch_names
+                ch_pos_dict = layout._get_ch_pos()
+                layout.pos = np.array([ch_pos_dict[name] for name in layout.names])
+                layout.pos = azimuthal_equidistant_projection(layout.pos)
+            else:
+                layout = mne.channels.read_montage('standard_1005')
+                layout.pos = azimuthal_equidistant_projection(layout.pos)
+                layout.names = layout.ch_names
         else:
             layout = mne.channels.read_layout(name)
         layout.names = list(map(str.upper, layout.names))
@@ -101,6 +110,7 @@ class Montage(pd.DataFrame):
         grad3_mask = list(map(lambda x: x[-1] == '3', names))
         combined_data = (data[grad2_mask]**2 + data[grad3_mask]**2)**0.5
         return combined_data, self.get_pos('GRAD')[grad2_mask]
+
 
 def band_hilbert(x, fs, band, N=None, axis=-1):
     x = np.asarray(x)
